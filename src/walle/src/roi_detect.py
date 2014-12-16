@@ -31,7 +31,7 @@ def depth_callback(data):
     global background
     global currentFrame
 
-    if background and not captureImage:
+    if background or not captureImage:
         cv2_img_depth = bridge.imgmsg_to_cv2(data, "32FC1")
 
         for y, row in enumerate(cv2_img_rgb):
