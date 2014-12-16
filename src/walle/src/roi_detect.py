@@ -46,6 +46,7 @@ def depth_callback(data):
             currentFrame = rgbd.copy()
             captureImage = False
             print "Image captured"
+            find_object()
 
 def find_object():
     centerPixelCoord = (320,240)
@@ -70,6 +71,6 @@ if __name__ == '__main__':
     rospy.Subscriber("/camera/depth/image", Image, depth_callback, queue_size=1)
     print "Started!"
 
-    find_object()
+
     captureImage = False
     rospy.spin()
