@@ -40,7 +40,6 @@ def depth_callback(data):
                 z = cv2_img_depth[y][x]
                 z = z[0]
                 rgbd[(x, y)] = ((color[0], color[0], color[0], float(z)))
-                print rgbd[(x, y)]
         if not background:
             background = rgbd.copy()
         elif captureImage:
