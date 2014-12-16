@@ -55,3 +55,8 @@ Then, in another terminal:
 rosrun walle roi_detect.py
 ```
 
+To adjust Kinect head by moving motor:
+
+```
+rosrun walle kinect_adjust.py
+```
