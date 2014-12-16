@@ -4,6 +4,13 @@ wall-e
 A Project in Embodied and Situated Language Processing. ([The course webpage](http://gul.gu.se/public/courseId/65966/lang-en/publicPage.do?item=27403175))
 
 
+Requirments
+======
+
+* (We have tested this package on Ubuntu 12.04 with ROS-groovy)
+* [freenect_stack](http://wiki.ros.org/freenect_stack)
+
+
 Installation
 ======
 
