@@ -18,6 +18,18 @@ Then, you can download the package, and compile it:
 
 ```
 git clone https://github.com/mmehdig/wall-e.git walle
+```
+
+If you don't have [kinect_aux](http://wiki.ros.org/kinect_aux), you can download it here. First you should have required packages:
+
+```
+sudo apt-get install libusb-1.0-0 libusb-1.0-0-dev
+git clone https://github.com/muhrix/kinect_aux.git
+```
+
+
+
+```
 cd ..
 catkin_make
 ```
