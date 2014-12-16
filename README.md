@@ -7,7 +7,7 @@ Project in Embodied and Situated Language Processing
 Installation
 ======
 
-First, you need to create a workspace, if you have a workspace you can go ti `src` folder and skip this part:
+First, you need to create a workspace, if you have a workspace you can go to `src` folder and skip this part:
 
 ```
 mkdir -p ~/catkin_ws/src
