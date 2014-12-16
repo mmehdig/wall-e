@@ -2,7 +2,6 @@
 
 import roslib
 import rospy
-import rospy
 import cv
 import sys
 from std_msgs.msg import String
