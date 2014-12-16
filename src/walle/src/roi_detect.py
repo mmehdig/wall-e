@@ -19,7 +19,7 @@ cv2_img_rgb = None
 background = None
 rgbd = dict()
 currentFrame = None
-captureImage = False
+captureImage = True
 
 def image_callback(data):
     global cv2_img_rgb
@@ -44,15 +44,17 @@ def depth_callback(data):
             background = rgbd.copy()
         elif captureImage:
             currentFrame = rgbd.copy()
+            captureImage = False
+            print "Image captured"
 
 def find_object():
     centerPixelCoord = (320,240)
-    centerPixel = captureImage[centerPixelCoord]
+    centerPixel = currentFrame[centerPixelCoord]
     topPixelCoord = centerPixelCoord[:]
     bottomPixelCoord = centerPixelCoord[:]
-    while not isnan(captureImage[topPixelCoord][3]) and abs(captureImage[topPixelCoord][3] - centerPixel[3]) < .1:
+    while not isnan(currentFrame[topPixelCoord][3]) and abs(currentFrame[topPixelCoord][3] - centerPixel[3]) < .1:
         topPixelCoord = (topPixelCoord[0]+1, topPixelCoord[1])
-    while not isnan(captureImage[bottomPixelCoord][3]) and abs(captureImage[bottomPixelCoord][3] - centerPixel[3]) < .1:
+    while not isnan(currentFrame[bottomPixelCoord][3]) and abs(currentFrame[bottomPixelCoord][3] - centerPixel[3]) < .1:
         bottomPixelCoord = (bottomPixelCoord[0]+1, bottomPixelCoord[1])
     print bottomPixelCoord, topPixelCoord
 
@@ -69,5 +71,5 @@ if __name__ == '__main__':
     print "Started!"
 
     find_object()
-
+    captureImage = False
     rospy.spin()
