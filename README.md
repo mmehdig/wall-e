@@ -7,7 +7,7 @@ An ongoing project in Embodied and Situated Language Processing. ([The course we
 Requirements
 ======
 
-* (We have tested this package on Ubuntu 12.04 with ROS-groovy)
+* [ROS](http://wiki.ros.org/ROS) (We have tested this package on Ubuntu 12.04 with ROS-groovy)
 * [freenect_stack](http://wiki.ros.org/freenect_stack)
 
 
