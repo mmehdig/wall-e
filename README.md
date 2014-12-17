@@ -64,6 +64,14 @@ rosrun walle roi_detect.py
 
 To adjust Kinect head by moving the motor:
 
+First, run the `kinect_aux`:
+
+```
+rosrun kinect_aux kinect_aux_node
+```
+
+Then:
+
 ```
 rosrun walle kinect_adjust.py
 ```
