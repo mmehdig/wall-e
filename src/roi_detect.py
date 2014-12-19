@@ -2,7 +2,7 @@
 
 import roslib
 import rospy
-import cv
+import cv2
 import sys
 from std_msgs.msg import String
 from sensor_msgs.msg import Image, RegionOfInterest, CameraInfo
@@ -24,13 +24,17 @@ def image_callback(data):
     global cv2_img_rgb
     cv2_img_rgb = bridge.imgmsg_to_cv2(data, "bgr8")
 
+    cv2.namedWindow("walle_roi_detect", cv2.WINDOW_NORMAL)
+    cv2.imshow("walle_roi_detect", cv2_img_rgb)
+    cv2.waitKey(5)
+
 
 def depth_callback(data):
     global rgbd
     global background
     global current_view
 
-    if len(background) < 30 or not captureImage:
+    if len(background) < 30 or len(current_view) < 30:
         cv2_img_depth = bridge.imgmsg_to_cv2(data, "32FC1")
 
         for y, row in enumerate(cv2_img_rgb):
@@ -40,7 +44,7 @@ def depth_callback(data):
                 rgbd[(x, y)] = ((color[0], color[0], color[0], float(z)))
         if len(background) < 30:
             background.append(rgbd.copy())
-			print "Background step ", len(background)
+            print "Background step ", len(background)
         elif len(current_view) < 30:
             currentFrame = rgbd.copy()
             captureImage = False
@@ -51,10 +55,10 @@ def average_bkg_and_cv(lst):
         toReturn = dict()
         for x in range(0,640):
                 for y in range(0,480):
-                	summed = (0,0,0,0)
-                	for i in lst[(x,y)]:
-                		summed = (summed[0]+lst[0], summed[1] + lst[1], summed[2] + lst[2], summed[3]+lst[3])
-                        toReturn[(x,y)] = float(summed/len(lst[(x,y)])) 
+                    summed = (0,0,0,0)
+                    for i in lst[(x,y)]:
+                        summed = (summed[0]+lst[0], summed[1] + lst[1], summed[2] + lst[2], summed[3]+lst[3])
+                        toReturn[(x,y)] = float(summed/len(lst[(x,y)]))
         return toReturn
 
 def calc_foreground(bkg, cv):
@@ -76,18 +80,18 @@ def find_object():
         current_view_avg = average_bkg_and_cv(current_view)
         foreground = calc_foreground(background_avg, current_view_avg)
         print foreground[(232,263)]
-	
-	horizontal_diffs = []
+
+        horizontal_diffs = []
         for x in range[10,640]:
                 for y in range[0,480]:
                         this_foreground = []
                         for i in range(0,10):
-                                this_foreground.append(foreground[(x-i,y])
+                                this_foreground.append(foreground[(x-i,y)])
                         print average_depths(this_foreground)
                         if average_depths(this_foreground) > 0.1:
                                 horizontal_diffs.append((x-5),y)
-        print horizonal_diffs
-	
+        print horizontal_diffs
+
 
 if __name__ == '__main__':
     rospy.init_node("walle-roi_detect")
