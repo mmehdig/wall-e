@@ -48,38 +48,46 @@ def depth_callback(data):
             find_object()
 
 def average_bkg_and_cv(lst):
-	toReturn = dict()
-	for x in range(0,640):
-		for y in range(0,480):
-			toReturn[(x,y)] = float(sum(col))/len(col) for col in zip(*lst[(x,y)]) 
-	return toReturn
+        toReturn = dict()
+        for x in range(0,640):
+                for y in range(0,480):
+                	summed = (0,0,0,0)
+                	for i in lst[(x,y)]:
+                		summed = (summed[0]+lst[0], summed[1] + lst[1], summed[2] + lst[2], summed[3]+lst[3])
+                        toReturn[(x,y)] = float(summed/len(lst[(x,y)])) 
+        return toReturn
 
 def calc_foreground(bkg, cv):
-	toReturn = dict()
-	for x in range(0,640):
-		for y in range(0,480):
-			toReturn[(x,y)] = (bkg[0] - cv[0], bkg[1] - cv[1], bkg[2] - cv[2], bkg[3] - cv[3])
+        toReturn = dict()
+        for x in range(0,640):
+                for y in range(0,480):
+                        toReturn[(x,y)] = (bkg[0] - cv[0], bkg[1] - cv[1], bkg[2] - cv[2], bkg[3] - cv[3])
+
+def average_depths(lst):
+        sum = 0
+        for i in lst:
+                sum += float(lst[3])
+        return sum/len(lst)
 
 def find_object():
-	global background_avg
-	if not background_avg:
-		background_avg = average_bkg_and_cv(background)
-	current_view_avg = average_bkg_and_cv(current_view)
-	foreground = calc_foreground(background_avg, current_view_avg)
-	print foreground
+        global background_avg
+        if not background_avg:
+                background_avg = average_bkg_and_cv(background)
+        current_view_avg = average_bkg_and_cv(current_view)
+        foreground = calc_foreground(background_avg, current_view_avg)
+        print foreground[(232,263)]
 	
-    centerPixel = currentFrame[centerPixelCoord]
-    topPixelCoord = centerPixelCoord[:]
-    bottomPixelCoord = centerPixelCoord[:]
-    while not isnan(currentFrame[topPixelCoord][3]) and abs(currentFrame[topPixelCoord][3] - centerPixel[3]) < .1:
-        topPixelCoord = (topPixelCoord[0]+1, topPixelCoord[1])
-    while not isnan(currentFrame[bottomPixelCoord][3]) and abs(currentFrame[bottomPixelCoord][3] - centerPixel[3]) < .1:
-        bottomPixelCoord = (bottomPixelCoord[0]+1, bottomPixelCoord[1])
-    print bottomPixelCoord, topPixelCoord
-
-
-# def detect_object:
-
+	horizontal_diffs = []
+        for x in range[10,640]:
+                for y in range[0,480]:
+                        this_foreground = []
+                        for i in range(0,10):
+                                this_foreground.append(foreground[(x-i,y])
+                        print average_depths(this_foreground)
+                        if average_depths(this_foreground) > 0.1:
+                                horizontal_diffs.append((x-5),y)
+        print horizonal_diffs
+	
 
 if __name__ == '__main__':
     rospy.init_node("walle-roi_detect")
