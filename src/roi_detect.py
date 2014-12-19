@@ -2,6 +2,7 @@
 
 import roslib
 import rospy
+import rospy
 import cv
 import sys
 from std_msgs.msg import String
@@ -15,10 +16,10 @@ from math import sqrt, isnan
 bridge = CvBridge()
 
 cv2_img_rgb = None
-background = None
+background = []
+background_avg = None
 rgbd = dict()
-currentFrame = None
-captureImage = True
+current_view = []
 
 def image_callback(data):
     global cv2_img_rgb
@@ -28,10 +29,9 @@ def image_callback(data):
 def depth_callback(data):
     global rgbd
     global background
-    global currentFrame
-    global captureImage
+    global current_view
 
-    if background or not captureImage:
+    if len(background) < 30 or not captureImage:
         cv2_img_depth = bridge.imgmsg_to_cv2(data, "32FC1")
 
         for y, row in enumerate(cv2_img_rgb):
@@ -39,16 +39,36 @@ def depth_callback(data):
                 z = cv2_img_depth[y][x]
                 z = z[0]
                 rgbd[(x, y)] = ((color[0], color[0], color[0], float(z)))
-        if not background:
-            background = rgbd.copy()
-        elif captureImage:
+        if len(background) < 30:
+            background.append(rgbd.copy())
+			print "Background step ", len(background)
+        elif len(current_view) < 30:
             currentFrame = rgbd.copy()
             captureImage = False
-            print "Image captured"
+            print "Image step", len(current_view)
             find_object()
 
+def average_bkg_and_cv(lst):
+	toReturn = dict()
+	for x in range(0,640):
+		for y in range(0,480):
+			toReturn[(x,y)] = float(sum(col))/len(col) for col in zip(*lst[(x,y)]) 
+	return toReturn
+
+def calc_foreground(bkg, cv):
+	toReturn = dict()
+	for x in range(0,640):
+		for y in range(0,480):
+			toReturn[(x,y)] = (bkg[0] - cv[0], bkg[1] - cv[1], bkg[2] - cv[2], bkg[3] - cv[3])
+
 def find_object():
-    centerPixelCoord = (320,240)
+	global background_avg
+	if not background_avg:
+		background_avg = average_bkg_and_cv(background)
+	current_view_avg = average_bkg_and_cv(current_view)
+	foreground = calc_foreground(background_avg, current_view_avg)
+	print foreground
+	
     centerPixel = currentFrame[centerPixelCoord]
     topPixelCoord = centerPixelCoord[:]
     bottomPixelCoord = centerPixelCoord[:]
