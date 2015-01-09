@@ -48,7 +48,11 @@ class cvBridgeDemo():
         # And one for the depth image
         cv.NamedWindow("Depth Image", cv.CV_WINDOW_NORMAL)
         cv.MoveWindow("Depth Image", 25, 350)
-        
+        self.known_objects = []
+        self.sift = cv2.SIFT()
+
+        self.current_depth = None
+
         # Create the cv_bridge object
         self.bridge = CvBridge()
         
@@ -79,33 +83,60 @@ class cvBridgeDemo():
         
         # Process any keyboard commands
         self.keystroke = cv.WaitKey(5)
-        if 32 <= self.keystroke and self.keystroke < 128:
-            cc = chr(self.keystroke).lower()
+
+        if 1000 <= self.keystroke and self.keystroke < 2000000:
+            print self.keystroke
+            cc = chr(self.keystroke & 255).lower()
             if cc == 'q':
                 # The user has press the q key, so exit
                 rospy.signal_shutdown("User hit q key to quit.")
-                
-    def depth_callback(self, ros_image):
-        # Use cv_bridge() to convert the ROS image to OpenCV format
-        try:
-            # The depth image is a single-channel float32 image
-            depth_image = self.bridge.imgmsg_to_cv(ros_image, "32FC1")
-        except CvBridgeError, e:
-            print e
+            if cc == 'i':
+                self.recognize_object(frame)
+            if cc == 'l':
+                self.learn_new_object(frame)
+                # save the features to the database
 
-        # Convert the depth image to a Numpy array since most cv2 functions
-        # require Numpy arrays.
+    def learn_new_object(self, frame):
+        name = raw_input('What is the object called?')
+        kp, des = self.sift.detectAndCompute(frame,None)
+        self.known_objects.append((name, kp, des))
+        print 'ok, %s' % name
+        #TODO publisher say "ok, 'name'"
+
+    def recognize_object(self,frame):
+
+        FLANN_INDEX_KDTREE = 0
+        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+        search_params = dict(checks = 50)
+        kp, des = self.sift.detectAndCompute(frame,None)
+        flann = cv2.FlannBasedMatcher(index_params, search_params)
+        for name, kp2, des2 in self.known_objects:
+            matches = flann.knnMatch(des,des2,k=2)
+            good = []
+            for m,n in matches:
+                if m.distance < 0.7*n.distance:
+            if len(good) > 10:
+                print len(good), name
+
+    def depth_callback(self, ros_image):
+        #Use cv_bridge() to convert the ROS image to OpenCV format
+        try:
+        #    The depth image is a single-channel float32 image
+            depth_image = self.bridge.imgmsg_to_cv2(ros_image, "16UC1")
+        except CvBridgeError, e:
+             print e
+        #
+        #Convert the depth image to a Numpy array since most cv2 functions
 
         depth_array = np.array(depth_image, dtype=np.float32)
-        #max_of_frame = max(max(i) for i in depth_array)
-        #print max_of_frame
+        self.current_depth = np.copy(depth_array)
         max_of_frame = 1000
         depth_array[depth_array < 1] = max_of_frame
         depth_array[depth_array > 1000] = max_of_frame
 
         # Normalize the depth image to fall between 0 (black) and 1 (white)
         cv2.normalize(depth_array, depth_array, 0, 1, cv2.NORM_MINMAX)
-        
+
         # Process the depth image
         depth_display_image = self.process_depth_image(depth_array)
     
@@ -114,21 +145,36 @@ class cvBridgeDemo():
           
     def process_image(self, frame):
         # Convert to greyscale
-
         grey = cv2.cvtColor(frame, cv.CV_BGR2GRAY)
-        
+        #print frame[self.current_depth > 0.9]
+        frame[np.tile(self.current_depth > 1000, (1, 1, 3))] = 255
+        frame[np.tile(self.current_depth < 1, (1, 1, 3))] = 255
+        return self.orb_function(frame)
         # Blur the image
         grey = cv2.blur(grey, (7, 7))
-        
         # Compute edges using the Canny edge filter
         edges = cv2.Canny(grey, 15.0, 30.0)
-        
         return edges
-    
-    def process_depth_image(self, frame):
-        # Blur the image
-#        gray = cv2.blur(frame, (7, 7))
-        # Compute edges using the Canny edge filter
+
+    def orb_function(self, frame):
+        #img = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        #gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        orb = cv2.FeatureDetector_create("ORB")
+        descriptor = cv2.DescriptorExtractor_create("ORB")
+        matcher = cv2.DescriptorMatcher_create("BruteForce-Hamming")
+
+        # find the keypoints with ORB
+        kp = orb.detect(frame)
+
+        # compute the descriptors with ORB
+        kp, des = descriptor.compute(frame, kp)
+
+        # draw only keypoints location,not size and orientation
+        img2 = cv2.drawKeypoints(frame,kp,color=(0,255,0), flags=0)
+        return img2
+
+
+    def good_Features(self, frame):
         img = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
         gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
@@ -136,13 +182,14 @@ class cvBridgeDemo():
         corners = cv2.goodFeaturesToTrack(gray,100,0.01,10)
 
         corners = np.int0(corners)
-        print corners
         for i in corners:
             x,y = i.ravel()
             cv2.circle(img,(x,y),3,255,-1)
-        # Just return the raw image for this demo
         return img
 
+    def process_depth_image(self, frame):
+        #return self.orb_function(frame)
+        return self.good_Features(frame)
         #dst = cv2.cornerHarris(gray,2,3,0.004)
 
         #result is dilated for marking the corners, not important
@@ -150,8 +197,6 @@ class cvBridgeDemo():
 
         # Threshold for an optimal value, it may vary depending on the image.
         #img[dst>0.01*dst.max()]=[0,0,255]
-
-        return img
     
     def cleanup(self):
         print "Shutting down vision node."
