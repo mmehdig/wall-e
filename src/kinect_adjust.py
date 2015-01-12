@@ -22,5 +22,6 @@ if __name__ == '__main__':
 
     pub = rospy.Publisher("/tilt_angle", Float64)
     rospy.Subscriber("/cur_tilt_angle", Float64, move_it)
-
+    move_it(target_angle)
+    
     rospy.spin()
