@@ -22,7 +22,7 @@
       
 """
 
-import roslib; roslib.load_manifest('rbx1_vision')
+import roslib;# roslib.load_manifest('rbx1_vision')
 import rospy
 import sys
 import cv2
@@ -30,10 +30,11 @@ import cv2.cv as cv
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
+from std_msgs.msg import String
 
 class cvBridgeDemo():
     def __init__(self):
-        self.node_name = "cv_bridge_demo"
+        self.node_name = "walle_recognizer"
         
         rospy.init_node(self.node_name)
         
@@ -52,9 +53,14 @@ class cvBridgeDemo():
         self.sift = cv2.SIFT()
 
         self.current_depth = None
+        self.current_color = None
 
         # Create the cv_bridge object
         self.bridge = CvBridge()
+
+        self.pub = rospy.Publisher("/walle/recognizer/publish", String)
+        rospy.Subscriber("/walle/recognizer/listen", String, self.receive, queue_size=1)
+        self.rate = rospy.Rate(10) # 10hz
         
         # Subscribe to the camera image and depth topics and set
         # the appropriate callbacks
@@ -83,25 +89,24 @@ class cvBridgeDemo():
         
         # Process any keyboard commands
         self.keystroke = cv.WaitKey(5)
-
-        if 1000 <= self.keystroke and self.keystroke < 2000000:
+        self.current_color = display_image
+        if self.keystroke > 0:
             print self.keystroke
             cc = chr(self.keystroke & 255).lower()
             if cc == 'q':
                 # The user has press the q key, so exit
                 rospy.signal_shutdown("User hit q key to quit.")
             if cc == 'i':
-                self.recognize_object(frame)
+                self.recognize_object(display_image)
             if cc == 'l':
-                self.learn_new_object(frame)
+                self.learn_new_object(display_image)
                 # save the features to the database
 
-    def learn_new_object(self, frame):
-        name = raw_input('What is the object called?')
+    def learn_new_object(self, frame, name):
         kp, des = self.sift.detectAndCompute(frame,None)
         self.known_objects.append((name, kp, des))
         print 'ok, %s' % name
-        #TODO publisher say "ok, 'name'"
+        self.send('ok, %s' % name)
 
     def recognize_object(self,frame):
 
@@ -110,13 +115,20 @@ class cvBridgeDemo():
         search_params = dict(checks = 50)
         kp, des = self.sift.detectAndCompute(frame,None)
         flann = cv2.FlannBasedMatcher(index_params, search_params)
+        scores = []
         for name, kp2, des2 in self.known_objects:
             matches = flann.knnMatch(des,des2,k=2)
             good = []
             for m,n in matches:
                 if m.distance < 0.7*n.distance:
+                    good.append(m)
             if len(good) > 10:
+                scores.append((len(good), name))
                 print len(good), name
+        if scores:
+            self.send(str(sorted(scores)[-1]))
+        else:
+            self.send("I don't know")
 
     def depth_callback(self, ros_image):
         #Use cv_bridge() to convert the ROS image to OpenCV format
@@ -150,11 +162,6 @@ class cvBridgeDemo():
         frame[np.tile(self.current_depth > 1000, (1, 1, 3))] = 255
         frame[np.tile(self.current_depth < 1, (1, 1, 3))] = 255
         return self.orb_function(frame)
-        # Blur the image
-        grey = cv2.blur(grey, (7, 7))
-        # Compute edges using the Canny edge filter
-        edges = cv2.Canny(grey, 15.0, 30.0)
-        return edges
 
     def orb_function(self, frame):
         #img = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
@@ -180,29 +187,45 @@ class cvBridgeDemo():
 
         gray = np.float32(gray)
         corners = cv2.goodFeaturesToTrack(gray,100,0.01,10)
-
-        corners = np.int0(corners)
-        for i in corners:
-            x,y = i.ravel()
-            cv2.circle(img,(x,y),3,255,-1)
+        try:
+            corners = np.int0(corners)
+            for i in corners:
+                x,y = i.ravel()
+                cv2.circle(img,(x,y),3,255,-1)
+        except:
+            pass
         return img
 
     def process_depth_image(self, frame):
-        #return self.orb_function(frame)
         return self.good_Features(frame)
-        #dst = cv2.cornerHarris(gray,2,3,0.004)
 
-        #result is dilated for marking the corners, not important
-        #dst = cv2.dilate(dst,None)
-
-        # Threshold for an optimal value, it may vary depending on the image.
-        #img[dst>0.01*dst.max()]=[0,0,255]
-    
     def cleanup(self):
         print "Shutting down vision node."
-        cv2.destroyAllWindows()   
-    
-def main(args):       
+        cv2.destroyAllWindows()
+
+    def send(self, data):
+        print "sending", data
+        self.pub.publish(data)
+        self.rate.sleep()
+
+    def receive(self, msg):
+        if isinstance(msg, String):
+            data = msg.data
+        else:
+            data = msg
+        if data[:8] == "this is ":
+            print data[8:]
+            self.learn_new_object(self.current_color, data[8:])
+        elif data == "what is this?":
+            print 'finding out what this is..'
+            self.recognize_object(self.current_color)
+        else:
+            print "I don't understand", data
+
+
+def main(args):
+    print("hello!")
+
     try:
         cvBridgeDemo()
         rospy.spin()
