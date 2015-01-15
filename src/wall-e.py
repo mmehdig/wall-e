@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 
 """
@@ -11,6 +12,7 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
+import codecs
 
 
 class Recognizer():
@@ -89,6 +91,7 @@ class Recognizer():
             arguments = [display_image] + self.current_stage[1:]
             method(*arguments)
             self.current_stage = None
+
 
     def depth_callback(self, ros_image):
         # Use cv_bridge() to convert the ROS image to OpenCV format
@@ -173,7 +176,7 @@ class Recognizer():
     def learn_new_object(self, frame, name):
         kp, des = self.sift.detectAndCompute(frame, None)
         self.known_objects.append((name, kp, des))
-        self.send('ok, %s' % name)
+        self.send(u'{"ok":"%s"}' % name)
 
     def recognize_object(self, frame):
         # extract sift features:
@@ -201,9 +204,15 @@ class Recognizer():
 
         # send out thoughts about object recognition
         if scores:
-            self.send(str(sorted(scores)))
+            self.send(self.jsonify(sorted(scores, reverse=True), "detected"))
         else:
-            self.send("I don't know")
+            self.send(u'{"detected":null}')
+
+    def jsonify(self, data, name):
+        if isinstance(data, list):
+            return u'{"' + name + u'":[' + u",".join(map(lambda t: u'{"%s":%f}' % t, data)) + u']}'
+
+        return u'{"error":500}'
 
     def cleanup(self):
         print "Shutting down vision node."
@@ -222,19 +231,24 @@ class Recognizer():
         else:
             data = msg
 
+        data = codecs.decode(data, 'utf-8')
         # debugging:
         print "received <<<", data
 
-        if data[:8] == "this is ":
-            print data[8:]
-            self.current_stage = [self.learn_new_object, data[8:]]
+        if data[:7] == u"learn: ":
+            print data[7:]
+            self.send(u'{"ok":"%s"}' % data[7:])
+            #self.current_stage = [self.learn_new_object, data[8:]]
             # self.learn_new_object(self.current_color, data[8:])
-        elif data == "what is this?":
-            print 'finding out what this is..'
-            self.current_stage = [self.recognize_object]
+
+        elif data == u"what is this?":
+            print u'finding out what this is..'
+            scores = [(u'اسب', 0.456789), (u'book', 0.1234)]
+            self.send(self.jsonify(sorted(scores, reverse=True), "detected"))
+            #self.current_stage = [self.recognize_object]
             # self.recognize_object(self.current_color)
         else:
-            print "I don't understand", data
+            print u"I don't understand", data
 
 
 def main(args):
