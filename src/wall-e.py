@@ -237,15 +237,17 @@ class Recognizer():
 
         if data[:7] == u"learn: ":
             print data[7:]
-            self.send(u'{"ok":"%s"}' % data[7:])
-            #self.current_stage = [self.learn_new_object, data[8:]]
+            # self.send(u'{"ok":"%s"}' % data[7:])
+
+            self.current_stage = [self.learn_new_object, data[8:]]
             # self.learn_new_object(self.current_color, data[8:])
 
         elif data == u"what is this?":
             print u'finding out what this is..'
-            scores = [(u'اسب', 0.456789), (u'book', 0.1234)]
-            self.send(self.jsonify(sorted(scores, reverse=True), "detected"))
-            #self.current_stage = [self.recognize_object]
+            # scores = [(u'häst', 0.456789), (u'book', 0.1234)]
+            # self.send(self.jsonify(sorted(scores, reverse=True), "detected"))
+
+            self.current_stage = [self.recognize_object]
             # self.recognize_object(self.current_color)
         else:
             print u"I don't understand", data
