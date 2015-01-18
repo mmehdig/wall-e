@@ -45,7 +45,9 @@ class Recognizer():
 
         self.pub = rospy.Publisher("/walle/recognizer/publish", String)
         self.rate = rospy.Rate(10)   # 10hz
-        
+
+        self.last_recognized = None
+
         # Subscribe to the camera image and depth topics and set
         # the appropriate callbacks
 
@@ -178,10 +180,14 @@ class Recognizer():
         self.known_objects.append((name, kp, des))
         self.send(u'{"ok":"%s"}' % name)
 
+    def reinforce_object(self, name):
+        self.known_objects.append((name, self.last_recognized[0], self.last_recognized[1]))
+        self.send(u'{"ok":"%s"}' % name)
+
     def recognize_object(self, frame):
         # extract sift features:
         kp, des = self.sift.detectAndCompute(frame, None)
-
+        self.last_recognized = (kp, des)
         # setup FLANN parameters (Fast Library for Approximate Nearest Neighbors)
         FLANN_INDEX_KDTREE = 0
         index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
@@ -249,6 +255,8 @@ class Recognizer():
 
             self.current_stage = [self.recognize_object]
             # self.recognize_object(self.current_color)
+        elif data == u"last":
+            self.current_stage = [self.reinforce_object]
         else:
             print u"I don't understand", data
 
@@ -265,4 +273,3 @@ def main(args):
 
 if __name__ == '__main__':
     main(sys.argv)
-
