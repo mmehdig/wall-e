@@ -34,7 +34,7 @@ class Recognizer():
         cv.NamedWindow("Depth Image", cv.CV_WINDOW_NORMAL)
         cv.MoveWindow("Depth Image", 25, 350)
         self.known_objects = []
-        self.sift = cv2.SIFT()
+        self.sift = cv2.ORB()
 
         self.current_depth = None
         # self.current_color = None
